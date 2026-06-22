@@ -1,0 +1,19 @@
+{
+  "name": "bumpa",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:evidence": "playwright test tests/jumia-checkout-flow.spec.ts --headed && node scripts/copy-latest-video.js",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report output/playwright/report"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@playwright/test": "^1.61.0"
+  }
+}

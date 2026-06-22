@@ -1,0 +1,77 @@
+name: Playwright E2E Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    - cron: '0 6 * * 1' # Weekly Monday 6am UTC smoke
+
+jobs:
+  test:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Jumia checkout smoke test
+        run: npx playwright test tests/jumia-checkout-flow.spec.ts
+        env:
+          CI: true
+
+      - name: Copy test video for artifacts
+        if: always()
+        run: node scripts/copy-latest-video.js
+        continue-on-error: true
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Playwright
+          path: output/playwright/junit.xml
+          reporter: java-junit
+          fail-on-error: true
+
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "## Playwright E2E Results" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f output/playwright/junit.xml ]; then
+            tests=$(grep -o 'tests="[0-9]*"' output/playwright/junit.xml | head -1 | grep -o '[0-9]*')
+            failures=$(grep -o 'failures="[0-9]*"' output/playwright/junit.xml | head -1 | grep -o '[0-9]*')
+            errors=$(grep -o 'errors="[0-9]*"' output/playwright/junit.xml | head -1 | grep -o '[0-9]*')
+            passed=$((tests - failures - errors))
+            echo "- **Tests run:** ${tests:-0}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- **Passed:** ${passed:-0}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- **Failed:** ${failures:-0}" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "JUnit report not found." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Download the HTML report, screenshots, and video from the **playwright-report** artifact." >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: |
+            output/playwright/report/
+            output/playwright/junit.xml
+            output/playwright/test-results/
+            output/playwright/checkout-flow.webm
+            output/playwright/cart-two-sellers.png
+            output/playwright/checkout-login-gate.png
+          retention-days: 14

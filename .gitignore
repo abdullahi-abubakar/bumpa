@@ -1,0 +1,14 @@
+node_modules/
+.playwright-cli/
+.DS_Store
+*.log
+
+# Generated Playwright output
+output/playwright/test-results/
+output/playwright/report/
+output/playwright/*.webm
+output/playwright/*.png
+
+# Local submission files (not for repo)
+docs/SUBMISSION_README.txt
+**/Bumpa_Jumia_QA_Assessment.xlsx
