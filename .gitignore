@@ -4,10 +4,7 @@ node_modules/
 *.log
 
 # Generated Playwright output
-output/playwright/test-results/
-output/playwright/report/
-output/playwright/*.webm
-output/playwright/*.png
+output/
 
 # Local submission files (not for repo)
 docs/SUBMISSION_README.txt
