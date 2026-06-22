@@ -27,6 +27,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run Jumia checkout smoke test
+        id: playwright
         run: npx playwright test tests/jumia-checkout-flow.spec.ts
         env:
           CI: true
@@ -43,7 +44,7 @@ jobs:
           name: Playwright
           path: output/playwright/junit.xml
           reporter: java-junit
-          fail-on-error: true
+          fail-on-error: false
 
       - name: Write job summary
         if: always()
@@ -62,6 +63,10 @@ jobs:
           fi
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "Download the HTML report, screenshots, and video from the **playwright-report** artifact." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail job if tests failed
+        if: steps.playwright.outcome == 'failure'
+        run: exit 1
 
       - uses: actions/upload-artifact@v4
         if: always()

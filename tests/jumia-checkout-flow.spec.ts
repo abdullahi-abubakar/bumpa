@@ -8,19 +8,34 @@ async function acceptCookies(page: Page) {
   }
 }
 
+async function gotoHome(page: Page) {
+  await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+  await page.waitForLoadState('load').catch(() => {});
+
+  const blocked = page.getByText(/security verification|Just a moment|Checking your browser/i);
+  if (await blocked.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await expect(page.getByRole('textbox', { name: 'Search' })).toBeVisible({ timeout: 60_000 });
+  }
+
+  await acceptCookies(page);
+  await expect(page.getByRole('textbox', { name: 'Search' })).toBeVisible({ timeout: 30_000 });
+}
+
 async function topSearch(page: Page, query: string) {
   await acceptCookies(page);
   const box = page.getByRole('textbox', { name: 'Search' });
+  await expect(box).toBeVisible({ timeout: 15_000 });
   await box.click();
   await box.fill(query);
   await box.press('Enter');
+  await page.waitForURL(/catalog|oraimo|nivea|jumia\.com\.ng/i, { timeout: 30_000 });
   await page.waitForLoadState('load');
   await acceptCookies(page);
 }
 
 async function openFirstProduct(page: Page, skipOfficialStore = false) {
   const cards = page.locator('article').filter({ has: page.locator('h3') });
-  await cards.first().waitFor({ state: 'visible', timeout: 20000 });
+  await cards.first().waitFor({ state: 'visible', timeout: 20_000 });
 
   const total = await cards.count();
   for (let i = 0; i < total; i++) {
@@ -34,20 +49,21 @@ async function openFirstProduct(page: Page, skipOfficialStore = false) {
   await acceptCookies(page);
 }
 
-async function expectCartCount(page: Page, count: number) {
-  await expect.poll(async () => {
-    const cart = page.locator('a[href="/cart/"]').first();
-    const text = await cart.innerText().catch(() => '');
-    return text.includes(String(count));
-  }, { timeout: 20000 }).toBe(true);
-}
-
 async function clickAddToCart(page: Page) {
   const btn = page.locator('#add-to-cart').getByRole('button', { name: /^Add to cart$/i });
-  await btn.waitFor({ state: 'visible', timeout: 30000 });
+  await btn.waitFor({ state: 'visible', timeout: 30_000 });
   await acceptCookies(page);
+  await btn.scrollIntoViewIfNeeded();
   await btn.click();
-  await page.waitForTimeout(1500);
+  await expect(
+    page.getByText(/item\(s\) added|added to cart/i).or(page.locator('a[href="/cart/"]').filter({ hasText: /\d/ }))
+  ).toBeVisible({ timeout: 15_000 });
+}
+
+async function expectCartCount(page: Page, count: number) {
+  await expect(page.getByRole('link', { name: new RegExp(`${count}\\s*Cart`, 'i') })).toBeVisible({
+    timeout: 20_000,
+  });
 }
 
 test.describe('Jumia multi-seller checkout', () => {
@@ -55,9 +71,7 @@ test.describe('Jumia multi-seller checkout', () => {
 
   test('Nivea + Oraimo via top search, cart, checkout, no payment', async ({ page }) => {
     await test.step('TC-01/TC-02: load homepage and accept cookies', async () => {
-      await page.goto('https://www.jumia.com.ng/');
-      await acceptCookies(page);
-      await expect(page.getByRole('textbox', { name: 'Search' })).toBeVisible();
+      await gotoHome(page);
     });
 
     await test.step('TC-05/TC-06/TC-07: search Nivea, open product, add to cart', async () => {
@@ -76,7 +90,7 @@ test.describe('Jumia multi-seller checkout', () => {
 
     await test.step('TC-11: open cart and verify both products', async () => {
       await page.getByRole('link', { name: /Cart/i }).click();
-      await page.waitForURL(/\/cart\/?/, { timeout: 15000 });
+      await page.waitForURL(/\/cart\/?/, { timeout: 15_000 });
       await acceptCookies(page);
       await expect(page.getByText(/NIVEA/i).first()).toBeVisible();
       await expect(page.getByText(/Oraimo/i).first()).toBeVisible();
@@ -85,7 +99,7 @@ test.describe('Jumia multi-seller checkout', () => {
 
     await test.step('TC-12/TC-13: checkout and abandon before payment', async () => {
       await page.getByRole('link', { name: /Checkout/i }).click();
-      await page.waitForURL(/checkout|login|customer|identification/, { timeout: 90000 });
+      await page.waitForURL(/checkout|login|customer|identification/, { timeout: 90_000 });
       await expect(page).not.toHaveURL(/payment|pay\.jumia/i);
       await page.screenshot({ path: 'output/playwright/checkout-login-gate.png', fullPage: true });
     });

@@ -12,14 +12,16 @@ export default defineConfig({
     ['junit', { outputFile: 'output/playwright/junit.xml' }],
     ...(process.env.CI ? [['github'] as const] : []),
   ],
-  timeout: 120_000,
+  timeout: 180_000,
   use: {
     baseURL: 'https://www.jumia.com.ng',
+    locale: 'en-NG',
+    timezoneId: 'Africa/Lagos',
     trace: 'on-first-retry',
     screenshot: 'on',
     video: 'on',
-    actionTimeout: 15000,
-    navigationTimeout: 60000,
+    actionTimeout: 20_000,
+    navigationTimeout: 90_000,
   },
   projects: [
     {
